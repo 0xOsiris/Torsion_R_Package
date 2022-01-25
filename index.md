@@ -1,37 +1,114 @@
-## Welcome to GitHub Pages
+## Torsion of Parametric Curve R Package
 
-You can use the [editor on GitHub](https://github.com/LeytonTaylor/TorsionR/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
+### Installation
 ```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+> library(devtools)
+> install_github("LeytonTaylor/TorsionR");
+> library(TorsionR)
 ```
 
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
+### Usage
+```markdown
+@param alpha A vector of 3 expressions defining the parametric curve
+@param t Evaluation parameter
+@return Scalar value Torsion of alpha at time t
+@details alpha must be a vector of 3 parametric expressions with param 't'
+@examples 
+> tAlpha <- torsion(c(expression(1 + t + cos(t)*sin(t),1 + 0.1*sin(t) + cos(t) * 0.1,0.1*sin(t))), 2)
+```
 
-### Jekyll Themes
+### Components
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/LeytonTaylor/TorsionR/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+## Torsion Calculation
 
-### Support or Contact
+```markdown
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+torsion <- function(alpha,t){
+
+  alphaPrimeMatrix <- d_util$alphaDerivativeMat(alpha,t)
+  alphaP <- c(eval(alphaPrimeMatrix[2,1]),eval(alphaPrimeMatrix[2,2]),eval(alphaPrimeMatrix[2,3]))
+  alphaDP <- c(eval(alphaPrimeMatrix[3,1]),eval(alphaPrimeMatrix[3,2]),eval(alphaPrimeMatrix[3,3]))
+  alphaTP <- c(eval(alphaPrimeMatrix[4,1]),eval(alphaPrimeMatrix[4,2]),eval(alphaPrimeMatrix[4,3]))
+  normCross <-xprod_util$xprod(alphaP,alphaDP)
+  normAD <-norm(as.matrix(normCross),"F")
+  num <- normCross * alphaTP
+  numFinal <- sum(num)
+  tAlpha = numFinal /(normAD^2)
+
+  return(tAlpha)
+  
+ }
+
+
+```
+## Cross product calculation
+```markdown
+
+#' @export
+xprod_util = new.env()
+xprod_util$xprod <- function(...) {
+  args <- list(...)
+
+  if (length(args) == 0) {
+    stop("No data supplied")
+  }
+  len <- unique(sapply(args, FUN=length))
+  if (length(len) > 1) {
+    stop("All vectors must be the same length")
+  }
+  if (len != length(args) + 1) {
+    stop("Must supply N-1 vectors of length N")
+  }
+
+  m <- do.call(rbind, args)
+  sapply(seq(len),
+         FUN=function(i) {
+           det(m[,-i,drop=FALSE]) * (-1)^(i+1)
+         })
+}
+
+
+```
+
+## Derivative Matrix
+```markdown
+#' @export
+d_util = new.env()
+d_util$alphaDerivativeMat <- function(alpha, t){
+
+  alphaP <- c(D(alpha[1],'t'), D(alpha[2],'t'),D(alpha[3],'t'))
+
+  alphaDP <- c(dd_util$DD(alpha[1],'t',2),dd_util$DD(alpha[2],'t',2),dd_util$DD(alpha[3],'t',2))
+  alphaTP <- c(dd_util$DD(alpha[1],'t',3),dd_util$DD(alpha[2],'t',3),dd_util$DD(alpha[3],'t',3))
+
+  alphaPrimeMatrix <-matrix(
+    c(alpha,alphaP,alphaDP, alphaTP),
+    nrow=4,
+    ncol=3,
+    byrow=TRUE
+
+  )
+
+  dimnames(alphaPrimeMatrix)=list(c("alpha","alphaP","alphaDP", "alphaTP"),c("X","Y","Z"))
+
+  return(alphaPrimeMatrix)
+
+}
+
+
+```
+
+## High Order Derivative Utility function
+```markdown
+#' @export
+dd_util = new.env()
+dd_util$DD <- function(expr, name, order=1) {
+  if(order < 1) stop("'order' must be >= 1")
+  if(order == 1)
+    return(D(expr, name))
+  else dd_util$DD(D(expr, name), name, order - 1)}
+
+```
+
+
+
