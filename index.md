@@ -1,4 +1,4 @@
-## Torsion of Parametric Curve R Package
+## Differential Geometry - Torsion of Parametric Curve R Package
 
 ### Installation
 ```markdown
